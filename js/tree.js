@@ -1,25 +1,38 @@
 // ===== Node Class =====
 export class Node {
-  constructor(text, parentId = null) {
+  constructor(text, parentId = null, metadata = {}) {
     this.id = this.generateId();
     this.text = text;
-    this.parentId = parentId;
-    this.childrenIds = [];
-    this.createdAt = new Date().toISOString();
+    this.parent = parentId;
+    this.children = [];
+    this.collapsed = false;
+    this.metadata = {
+      created: new Date().toISOString(),
+      model: metadata.model || null,
+      temperature: metadata.temperature || null,
+      maxTokens: metadata.maxTokens || null,
+      topP: metadata.topP || null,
+      topK: metadata.topK || null,
+      frequencyPenalty: metadata.frequencyPenalty || null,
+      presencePenalty: metadata.presencePenalty || null,
+      edited: false,
+      editedAt: null
+    };
   }
 
   generateId() {
-    return 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    // Use UUID v4 as per spec
+    return crypto.randomUUID();
   }
 
   addChild(childId) {
-    if (!this.childrenIds.includes(childId)) {
-      this.childrenIds.push(childId);
+    if (!this.children.includes(childId)) {
+      this.children.push(childId);
     }
   }
 
   removeChild(childId) {
-    this.childrenIds = this.childrenIds.filter(id => id !== childId);
+    this.children = this.children.filter(id => id !== childId);
   }
 }
 
@@ -71,7 +84,7 @@ export class Tree {
       const node = this.getNode(currentId);
       if (!node) break;
       path.unshift(node.text);
-      currentId = node.parentId;
+      currentId = node.parent;
     }
 
     return path.join('');
@@ -81,14 +94,14 @@ export class Tree {
   getChildren(nodeId) {
     const node = this.getNode(nodeId);
     if (!node) return [];
-    return node.childrenIds.map(id => this.getNode(id)).filter(n => n !== undefined);
+    return node.children.map(id => this.getNode(id)).filter(n => n !== undefined);
   }
 
   // Get the parent of a node
   getParent(nodeId) {
     const node = this.getNode(nodeId);
-    if (!node || !node.parentId) return null;
-    return this.getNode(node.parentId);
+    if (!node || !node.parent) return null;
+    return this.getNode(node.parent);
   }
 
   // Delete a node and all its descendants
@@ -102,12 +115,12 @@ export class Tree {
     if (!node) return false;
 
     // Recursively delete all children
-    const childrenToDelete = [...node.childrenIds];
+    const childrenToDelete = [...node.children];
     childrenToDelete.forEach(childId => this.deleteNode(childId));
 
     // Remove from parent's children list
-    if (node.parentId) {
-      const parent = this.getNode(node.parentId);
+    if (node.parent) {
+      const parent = this.getNode(node.parent);
       if (parent) {
         parent.removeChild(nodeId);
       }
@@ -137,28 +150,56 @@ export class Tree {
     };
   }
 
-  // Export tree to JSON
+  // Export tree to JSON (matches FILE_FORMAT.md spec)
   toJSON() {
-    const nodesArray = Array.from(this.nodes.values());
+    const nodesObject = {};
+
+    // Convert Map to object with node IDs as keys
+    this.nodes.forEach((node, id) => {
+      nodesObject[id] = {
+        id: node.id,
+        text: node.text,
+        parent: node.parent,
+        children: node.children,
+        collapsed: node.collapsed,
+        metadata: node.metadata
+      };
+    });
+
     return {
-      rootId: this.rootId,
-      selectedNodeId: this.selectedNodeId,
-      nodes: nodesArray,
-      exportedAt: new Date().toISOString()
+      version: '1.0',
+      root: this.rootId,
+      nodes: nodesObject,
+      metadata: {
+        created: this.nodes.get(this.rootId)?.metadata.created || new Date().toISOString(),
+        modified: new Date().toISOString(),
+        totalNodes: this.nodes.size,
+        title: null,
+        description: null
+      }
     };
   }
 
-  // Import tree from JSON
+  // Import tree from JSON (matches FILE_FORMAT.md spec)
   fromJSON(data) {
     this.nodes.clear();
-    this.rootId = data.rootId;
-    this.selectedNodeId = data.selectedNodeId || data.rootId;
+    this.rootId = data.root;
+    this.selectedNodeId = data.root;
 
-    data.nodes.forEach(nodeData => {
-      const node = new Node(nodeData.text, nodeData.parentId);
+    // Convert object to Map
+    Object.entries(data.nodes).forEach(([id, nodeData]) => {
+      const node = new Node(nodeData.text, nodeData.parent);
       node.id = nodeData.id;
-      node.childrenIds = nodeData.childrenIds || [];
-      node.createdAt = nodeData.createdAt;
+      node.children = nodeData.children || [];
+      node.collapsed = nodeData.collapsed || false;
+      node.metadata = nodeData.metadata || {
+        created: new Date().toISOString(),
+        model: null,
+        temperature: null,
+        maxTokens: null,
+        edited: false,
+        editedAt: null
+      };
       this.nodes.set(node.id, node);
     });
 

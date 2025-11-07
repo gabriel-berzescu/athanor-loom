@@ -56,6 +56,7 @@ export class TreeVisualizer {
   }
 
   // Calculate layout positions for all nodes
+  // Root at bottom, children grow upward (negative Y)
   calculateLayout(tree) {
     const layout = new Map();
     const levelWidths = new Map();
@@ -77,8 +78,8 @@ export class TreeVisualizer {
       levelWidths.set(level, currentCount + 1);
 
       const node = tree.getNode(nodeId);
-      if (node && node.childrenIds) {
-        node.childrenIds.forEach(childId => {
+      if (node && node.children) {
+        node.children.forEach(childId => {
           tempQueue.push({ nodeId: childId, level: level + 1 });
         });
       }
@@ -101,14 +102,15 @@ export class TreeVisualizer {
       const totalWidth = (nodesInLevel - 1) * this.nodeSpacing;
       const startX = -totalWidth / 2;
 
+      // Negative Y so tree grows upward from root
       layout.set(nodeId, {
         x: startX + indexInLevel * this.nodeSpacing,
-        y: level * this.levelHeight
+        y: -level * this.levelHeight
       });
 
       const node = tree.getNode(nodeId);
-      if (node && node.childrenIds) {
-        node.childrenIds.forEach(childId => {
+      if (node && node.children) {
+        node.children.forEach(childId => {
           queue.push({ nodeId: childId, level: level + 1 });
         });
       }
@@ -133,18 +135,20 @@ export class TreeVisualizer {
   }
 
   // Draw edges between nodes
+  // Lines go from parent (lower) to child (higher/upward)
   drawEdges(tree, layout) {
     tree.nodes.forEach((node, nodeId) => {
-      if (node.parentId) {
-        const startPos = layout.get(node.parentId);
+      if (node.parent) {
+        const startPos = layout.get(node.parent);
         const endPos = layout.get(nodeId);
 
         if (startPos && endPos) {
           const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          // Parent is below (higher Y), child is above (lower Y)
           line.setAttribute('x1', startPos.x);
-          line.setAttribute('y1', startPos.y + this.nodeRadius);
+          line.setAttribute('y1', startPos.y - this.nodeRadius); // From top of parent
           line.setAttribute('x2', endPos.x);
-          line.setAttribute('y2', endPos.y - this.nodeRadius);
+          line.setAttribute('y2', endPos.y + this.nodeRadius); // To bottom of child
           line.setAttribute('stroke', '#3a3a3a');
           line.setAttribute('stroke-width', '2');
 
@@ -161,7 +165,7 @@ export class TreeVisualizer {
       if (!pos) return;
 
       const isSelected = nodeId === selectedNodeId;
-      const hasChildren = node.childrenIds && node.childrenIds.length > 0;
+      const hasChildren = node.children && node.children.length > 0;
 
       // Create group for node
       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -190,7 +194,7 @@ export class TreeVisualizer {
       const labelText = node.text.trim().substring(0, 8) || '…';
       label.textContent = labelText;
 
-      // Child count indicator
+      // Child count indicator (shown above node since children grow upward)
       if (hasChildren) {
         const badge = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         badge.setAttribute('cx', pos.x + this.nodeRadius * 0.7);
@@ -209,7 +213,7 @@ export class TreeVisualizer {
         badgeText.setAttribute('font-size', '10');
         badgeText.setAttribute('font-weight', 'bold');
         badgeText.setAttribute('pointer-events', 'none');
-        badgeText.textContent = node.childrenIds.length;
+        badgeText.textContent = node.children.length;
 
         group.appendChild(badge);
         group.appendChild(badgeText);

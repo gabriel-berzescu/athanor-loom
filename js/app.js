@@ -124,7 +124,10 @@ function handleAddChild() {
   const newText = prompt('Enter text for new child node:', ' and they lived happily ever after.');
   if (newText === null) return; // User cancelled
 
-  loomTree.addChildNode(loomTree.selectedNodeId, newText);
+  const newNode = loomTree.addChildNode(loomTree.selectedNodeId, newText);
+  if (newNode) {
+    loomTree.selectedNodeId = newNode.id; // Select the newly created node
+  }
   updateDisplay();
 
   console.log('Child added. New tree stats:', loomTree.getStats());

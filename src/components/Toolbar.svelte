@@ -1,10 +1,81 @@
 <script>
   import { tree, selectedNodeId, addChildToSelected } from '../stores/treeStore.js';
-  import { drawerOpen } from '../stores/uiStore.js';
+  import { drawerOpen, loadingNodes } from '../stores/uiStore.js';
+  import { settings } from '../stores/settingsStore.js';
   import { saveTree, loadTree } from '../lib/storage.js';
+  import { OpenRouterClient } from '../lib/api.js';
+
+  let isGenerating = false;
 
   function handleSettings() {
     drawerOpen.set(true);
+  }
+
+  async function handleGenerate(count) {
+    // Get current values from stores
+    let currentSelected;
+    let currentTree;
+    let currentSettings;
+
+    selectedNodeId.subscribe(id => currentSelected = id)();
+    tree.subscribe(t => currentTree = t)();
+    settings.subscribe(s => currentSettings = s)();
+
+    // Validate selection
+    if (!currentSelected) {
+      alert('No node selected. Please select a node first.');
+      return;
+    }
+
+    // Validate API key
+    if (!currentSettings.api.apiKey) {
+      alert('Please configure your OpenRouter API key in Settings first.');
+      drawerOpen.set(true);
+      return;
+    }
+
+    // Set loading state
+    isGenerating = true;
+    loadingNodes.update(nodes => [...nodes, currentSelected]);
+
+    try {
+      // Get full path text to selected node
+      const promptText = currentTree.getFullPath(currentSelected);
+      console.log(`Generating ${count} completions from node ${currentSelected}`);
+      console.log('Prompt text:', promptText.substring(0, 100) + '...');
+
+      // Create API client
+      const client = new OpenRouterClient(
+        currentSettings.api.apiKey,
+        currentSettings.api.modelName
+      );
+
+      // Generate multiple completions
+      const completions = await client.generateMultiple(
+        promptText,
+        count,
+        currentSettings.generation
+      );
+
+      console.log(`Generated ${completions.length} completions`);
+
+      // Add each completion as a child node
+      tree.update(t => {
+        completions.forEach(text => {
+          t.addChildNode(currentSelected, text);
+        });
+        return t;
+      });
+
+      console.log('Successfully added child nodes');
+    } catch (error) {
+      console.error('Generation failed:', error);
+      alert('Generation failed: ' + error.message);
+    } finally {
+      // Clear loading state
+      isGenerating = false;
+      loadingNodes.update(nodes => nodes.filter(id => id !== currentSelected));
+    }
   }
 
   function handleAddChild() {
@@ -93,8 +164,34 @@
       Save
     </button>
 
-    <button class="button primary" on:click={handleAddChild}>
-      Add Child to Selected
+    <div class="button-group">
+      <button
+        class="button generate"
+        on:click={() => handleGenerate(3)}
+        disabled={isGenerating}
+      >
+        {isGenerating ? 'Generating...' : 'Generate 3'}
+      </button>
+
+      <button
+        class="button generate"
+        on:click={() => handleGenerate(5)}
+        disabled={isGenerating}
+      >
+        Generate 5
+      </button>
+
+      <button
+        class="button generate"
+        on:click={() => handleGenerate(7)}
+        disabled={isGenerating}
+      >
+        Generate 7
+      </button>
+    </div>
+
+    <button class="button secondary" on:click={handleAddChild}>
+      Add Child Manually
     </button>
 
     <button class="button secondary" on:click={handleExport}>
@@ -123,6 +220,12 @@
   .controls {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 0.25rem;
   }
 
   .button {
@@ -135,8 +238,13 @@
     transition: opacity 0.2s;
   }
 
-  .button:hover {
+  .button:hover:not(:disabled) {
     opacity: 0.9;
+  }
+
+  .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .button.primary {
@@ -146,6 +254,11 @@
 
   .button.secondary {
     background: #666;
+    color: white;
+  }
+
+  .button.generate {
+    background: #4a9eff;
     color: white;
   }
 </style>

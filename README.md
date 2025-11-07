@@ -31,13 +31,30 @@ Traditional language model interfaces present a single path through probability 
 ## Quick Start
 
 1. Clone this repository
-2. Open `index.html` in your browser (double-click the file)
-3. Open settings and enter your OpenRouter API key
-4. Enter a base model name (e.g., `meta-llama/llama-3.1-8b-instruct`)
-5. Type your initial text in the seed node
-6. Click "Generate 3" to create your first branches
-7. Click any node to view the full text path
-8. Continue branching to explore probability space
+   ```bash
+   git clone https://github.com/gabriel-berzescu/athanor-loom.git
+   cd athanor-loom
+   ```
+
+2. Install dependencies
+   ```bash
+   npm install
+   ```
+
+3. Start the development server
+   ```bash
+   npm run dev
+   ```
+
+4. Open your browser to `http://localhost:5173`
+
+5. Try the interactive tree:
+   - Click nodes to select them (they turn red)
+   - Click "Add Child to Selected" to create new branches
+   - Use mouse wheel to zoom, drag to pan
+   - Click "Export JSON" to save your tree
+
+**Note**: The app currently runs with demo functionality. Full API integration coming soon.
 
 ## Why "Athanor Loom"?
 
@@ -62,8 +79,9 @@ An **athanor** is an alchemical furnace designed for slow, steady transformation
 
 ## Requirements
 
+- **Node.js** 18+ and npm
 - Modern web browser (Chrome, Firefox, Safari, Edge)
-- OpenRouter API key ([get one here](https://openrouter.ai/))
+- OpenRouter API key ([get one here](https://openrouter.ai/)) *(coming soon)*
 - Internet connection for API calls
 
 ## Project Status

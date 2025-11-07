@@ -1,5 +1,11 @@
 <script>
   import { tree, selectedNodeId, addChildToSelected } from '../stores/treeStore.js';
+  import { drawerOpen } from '../stores/uiStore.js';
+  import { saveTree, loadTree } from '../lib/storage.js';
+
+  function handleSettings() {
+    drawerOpen.set(true);
+  }
 
   function handleAddChild() {
     let currentSelected;
@@ -14,6 +20,39 @@
     if (newText === null) return; // User cancelled
 
     addChildToSelected(newText);
+  }
+
+  async function handleSave() {
+    let currentTree;
+    tree.subscribe(t => currentTree = t)();
+
+    try {
+      const success = await saveTree(currentTree);
+      if (success) {
+        alert('Tree saved successfully');
+      }
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save tree: ' + error.message);
+    }
+  }
+
+  async function handleLoad() {
+    try {
+      const data = await loadTree();
+      if (!data) return; // User cancelled
+
+      tree.update(t => {
+        t.fromJSON(data);
+        selectedNodeId.set(t.rootId);
+        return t;
+      });
+
+      alert('Tree loaded successfully');
+    } catch (error) {
+      console.error('Load failed:', error);
+      alert('Failed to load tree: ' + error.message);
+    }
   }
 
   function handleExport() {
@@ -42,6 +81,18 @@
   <h1 class="title">Athanor Loom</h1>
 
   <div class="controls">
+    <button class="button secondary" on:click={handleSettings}>
+      ⚙ Settings
+    </button>
+
+    <button class="button secondary" on:click={handleLoad}>
+      Load
+    </button>
+
+    <button class="button secondary" on:click={handleSave}>
+      Save
+    </button>
+
     <button class="button primary" on:click={handleAddChild}>
       Add Child to Selected
     </button>

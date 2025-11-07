@@ -3,6 +3,7 @@
   import Toolbar from './components/Toolbar.svelte';
   import LeftPanel from './components/LeftPanel.svelte';
   import TreeCanvas from './components/TreeCanvas.svelte';
+  import SettingsDrawer from './components/SettingsDrawer.svelte';
   import { initializeTree } from './stores/treeStore.js';
 
   onMount(() => {
@@ -24,6 +25,8 @@
       <TreeCanvas />
     </div>
   </div>
+
+  <SettingsDrawer />
 </div>
 
 <style>

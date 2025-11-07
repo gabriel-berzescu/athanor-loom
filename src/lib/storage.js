@@ -127,7 +127,7 @@ export function getDefaultSettings() {
   return {
     api: {
       apiKey: '',
-      modelName: 'meta-llama/llama-3.1-8b-instruct'
+      modelName: 'meta-llama/llama-3.1-405b'
     },
     generation: {
       temperature: 0.7,

@@ -1,4 +1,5 @@
 import { Tree, Node } from './tree.js';
+import { TreeVisualizer } from './tree-viz.js';
 
 // ===== Global Tree Instance =====
 let loomTree = null;
@@ -6,6 +7,7 @@ let loomTree = null;
 // ===== UI Elements =====
 let textViewElement = null;
 let treeInfoElement = null;
+let treeVisualizer = null;
 
 // ===== Initialize on Page Load =====
 function initializeLoom() {
@@ -38,6 +40,17 @@ function initializeLoom() {
 function setupUI() {
   const leftPanel = document.querySelector('.left-panel');
   const panelContent = leftPanel.querySelector('.panel-content');
+
+  // Initialize tree visualizer
+  const rightPanel = document.querySelector('.right-panel');
+  rightPanel.innerHTML = ''; // Clear placeholder
+  const vizContainer = document.createElement('div');
+  vizContainer.style.width = '100%';
+  vizContainer.style.height = '100%';
+  rightPanel.appendChild(vizContainer);
+
+  treeVisualizer = new TreeVisualizer(vizContainer);
+  treeVisualizer.onNodeClick = handleNodeClick;
 
   // Create tree info section
   treeInfoElement = document.createElement('div');
@@ -111,10 +124,21 @@ function updateDisplay() {
     <div style="color: #e0e0e0; white-space: pre-wrap;">${fullPath || '(empty)'}</div>
   `;
 
+  // Update tree visualization
+  if (treeVisualizer) {
+    treeVisualizer.render(loomTree, loomTree.selectedNodeId);
+  }
+
   console.log('Display updated');
 }
 
 // ===== Event Handlers =====
+function handleNodeClick(nodeId) {
+  loomTree.selectedNodeId = nodeId;
+  updateDisplay();
+  console.log('Selected node:', nodeId);
+}
+
 function handleAddChild() {
   if (!loomTree.selectedNodeId) {
     alert('No node selected');
